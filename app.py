@@ -120,8 +120,13 @@ def sample_large_df(df: pd.DataFrame, max_rows: int = MAX_ROWS_SAMPLE) -> Tuple[
     return df, False
 
 def prepare_estimators(problem: str, compare_models: list):
+    """
+    Build estimator instances and their RandomizedSearchCV param_distributions.
+    Only include models that appear in compare_models.
+    """
     estimators = {}
     param_distributions = {}
+
     if problem == "classification":
         if "RandomForest" in compare_models:
             estimators["rf"] = RandomForestClassifier(random_state=42)
@@ -130,24 +135,25 @@ def prepare_estimators(problem: str, compare_models: list):
                 "model__max_depth": [None, 10, 30],
                 "model__min_samples_split": [2, 5, 10]
             }
+
         if "HistGB" in compare_models:
-            estimators["histgb"] = HistGradientBoostingClassifier(random_state=42) if problem=="classification" else HistGradientBoostingRegressor(random_state=42)
+            estimators["histgb"] = HistGradientBoostingClassifier(random_state=42)
             param_distributions["histgb"] = {"model__max_iter": [100, 300], "model__max_leaf_nodes": [31, 63]}
 
         if "ExtraTrees" in compare_models:
-            estimators["et"] = ExtraTreesClassifier(n_estimators=200, random_state=42) if problem=="classification" else ExtraTreesRegressor(n_estimators=200, random_state=42)
+            estimators["et"] = ExtraTreesClassifier(n_estimators=200, random_state=42)
             param_distributions["et"] = {"model__n_estimators": [100,200,400]}
 
         if "KNN" in compare_models:
-            estimators["knn"] = KNeighborsClassifier() if problem=="classification" else KNeighborsRegressor()
+            estimators["knn"] = KNeighborsClassifier()
             param_distributions["knn"] = {"model__n_neighbors": [3,5,7], "model__weights": ["uniform","distance"]}
-        
+
         if "SVM" in compare_models:
-            estimators["svm"] = SVC(probability=True) if problem=="classification" else SVR()
+            estimators["svm"] = SVC(probability=True)
             param_distributions["svm"] = {"model__C": [0.1,1,10], "model__kernel": ["rbf","linear"]}
-        
+
         if "MLP" in compare_models:
-            estimators["mlp"] = MLPClassifier(max_iter=500, early_stopping=True, random_state=42) if problem=="classification" else MLPRegressor(max_iter=500)
+            estimators["mlp"] = MLPClassifier(max_iter=500, early_stopping=True, random_state=42)
             param_distributions["mlp"] = {"model__hidden_layer_sizes": [(64,),(128,64)], "model__alpha":[1e-4,1e-3]}
 
         if "XGBoost" in compare_models and XGBClassifier is not None:
@@ -157,15 +163,32 @@ def prepare_estimators(problem: str, compare_models: list):
                 "model__max_depth": [3, 6, 10],
                 "model__learning_rate": [0.01, 0.05, 0.1]
             }
+
         if "LogisticRegression" in compare_models:
             estimators["logreg"] = LogisticRegression(max_iter=2000)
             param_distributions["logreg"] = {"model__C": [0.01, 0.1, 1, 10], "model__penalty": ["l2"]}
-    else:
-        estimators["rf"] = RandomForestRegressor(random_state=42) if 'RandomForest' in compare_models or True else RandomForestRegressor(random_state=42)
-        param_distributions["rf"] = {"model__n_estimators": [100, 200], "model__max_depth": [None, 10, 30]}
+
+    else:  # regression
+        if "RandomForest" in compare_models:
+            estimators["rf"] = RandomForestRegressor(random_state=42)
+            param_distributions["rf"] = {"model__n_estimators": [100, 200], "model__max_depth": [None, 10, 30]}
+
         if "XGBoost" in compare_models and XGBRegressor is not None:
             estimators["xgb"] = XGBRegressor(random_state=42)
             param_distributions["xgb"] = {"model__n_estimators": [100, 300], "model__max_depth": [3, 6], "model__learning_rate": [0.01, 0.1]}
+
+        if "ExtraTrees" in compare_models:
+            estimators["et"] = ExtraTreesRegressor(n_estimators=200, random_state=42)
+            param_distributions["et"] = {"model__n_estimators": [100,200,400]}
+
+        if "KNN" in compare_models:
+            estimators["knn"] = KNeighborsRegressor()
+            param_distributions["knn"] = {"model__n_neighbors": [3,5,7], "model__weights": ["uniform","distance"]}
+
+        if "MLP" in compare_models:
+            estimators["mlp"] = MLPRegressor(max_iter=500)
+            param_distributions["mlp"] = {"model__hidden_layer_sizes": [(64,),(128,64)], "model__alpha":[1e-4,1e-3]}
+
     return estimators, param_distributions
 
 # ----- UI: Upload & basic checks -----
